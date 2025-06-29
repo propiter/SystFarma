@@ -132,19 +132,6 @@ CREATE TABLE IF NOT EXISTS temperaturas (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insertar temperaturas por defecto
-INSERT INTO temperaturas (descripcion, rango_temperatura, temperatura_min, temperatura_max, color_indicador) VALUES
-('Ambiente', '15-25°C', 15.0, 25.0, '#22C55E'),
-('Refrigeración', '2-8°C', 2.0, 8.0, '#3B82F6'),
-('Congelación', '-18°C o menos', -25.0, -18.0, '#8B5CF6'),
-('Controlada', '20-25°C', 20.0, 25.0, '#F59E0B')
-ON CONFLICT (descripcion)
-DO UPDATE SET 
-    rango_temperatura = EXCLUDED.rango_temperatura,
-    temperatura_min = EXCLUDED.temperatura_min,
-    temperatura_max = EXCLUDED.temperatura_max,
-    color_indicador = EXCLUDED.color_indicador;
-
 -- =================================
 -- 6. TABLA: categorias
 -- =================================
@@ -267,20 +254,26 @@ CREATE TABLE IF NOT EXISTS lotes (
 -- =================================
 -- TRIGGER para actualizar dias_vencimiento y es_critico_vencimiento
 -- =================================
-CREATE OR REPLACE FUNCTION actualizar_alertas_lote()
-RETURNS TRIGGER AS $$
+DO $$
 BEGIN
-    NEW.dias_vencimiento := EXTRACT(DAY FROM NEW.fecha_vencimiento - CURRENT_DATE);
-    NEW.es_critico_vencimiento := 
-        (NEW.fecha_vencimiento <= CURRENT_DATE + INTERVAL '6 months' AND NEW.cantidad_disponible > 0);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_alertas_lote') THEN
+        EXECUTE '
+        CREATE OR REPLACE FUNCTION actualizar_alertas_lote()
+        RETURNS TRIGGER AS $func$
+        BEGIN
+            NEW.dias_vencimiento := EXTRACT(DAY FROM (NEW.fecha_vencimiento - CURRENT_DATE));
+            NEW.es_critico_vencimiento := (NEW.fecha_vencimiento <= (CURRENT_DATE + INTERVAL ''6 months'') AND NEW.cantidad_disponible > 0);
+            RETURN NEW;
+        END
+        $func$ LANGUAGE plpgsql';
 
-CREATE TRIGGER trigger_alertas_lote
-BEFORE INSERT OR UPDATE ON lotes
-FOR EACH ROW
-EXECUTE FUNCTION actualizar_alertas_lote();
+        EXECUTE '
+        CREATE TRIGGER trigger_alertas_lote
+        BEFORE INSERT OR UPDATE ON lotes
+        FOR EACH ROW
+        EXECUTE FUNCTION actualizar_alertas_lote()';
+    END IF;
+END $$;
 
 -- ÍNDICES para lotes
 
@@ -1149,15 +1142,6 @@ $$ LANGUAGE plpgsql;
 -- =================================
 -- DATOS INICIALES ADICIONALES
 -- =================================
-
--- Insertar usuario administrador por defecto si no existe
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM usuarios WHERE correo = 'admin@sigfarma.com') THEN
-        INSERT INTO usuarios (nombre, correo, contraseña, rol) VALUES
-        ('Administrador', 'admin@sigfarma.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.PmvlG.', 'admin');
-    END IF;
-END $$;
 
 -- Insertar cliente genérico
 INSERT INTO clientes (nombre, documento, tipo_documento) VALUES
