@@ -257,12 +257,8 @@ CREATE TABLE IF NOT EXISTS lotes (
     acta_recepcion_id INTEGER,
     numero_factura VARCHAR(50),
     alerta_vencimiento BOOLEAN DEFAULT FALSE,
-
-    -- Nuevas columnas para evitar funciones STABLE en índices
-    dias_vencimiento INTEGER DEFAULT NULL,
+    dias_vencimiento INTEGER,
     es_critico_vencimiento BOOLEAN DEFAULT FALSE,
-
-    -- Constraints
     CONSTRAINT chk_cantidad_disponible_inicial CHECK (cantidad_disponible <= cantidad_inicial),
     CONSTRAINT chk_fechas_logicas CHECK (fecha_vencimiento > COALESCE(fecha_fabricacion, CURRENT_DATE - INTERVAL '10 years')),
     CONSTRAINT uk_lote_producto UNIQUE (lote_codigo, producto_id)
@@ -1020,17 +1016,40 @@ LEFT JOIN categorias c ON p.categoria_id = c.categoria_id;
 -- Vista de lotes con alertas de vencimiento
 CREATE OR REPLACE VIEW vista_lotes_alertas AS
 SELECT 
-    l.*,
+    l.lote_id,
+    l.lote_codigo,
+    l.producto_id,
+    l.proveedor_id,
+    l.fecha_fabricacion,
+    l.fecha_vencimiento,
+    l.cantidad_inicial,
+    l.cantidad_disponible,
+    l.cantidad_reservada,
+    l.precio_compra,
+    l.precio_venta,
+    l.descuento_compra,
+    l.impuesto_compra,
+    l.costo_total,
+    l.ubicacion,
+    l.observaciones,
+    l.estado,
+    l.fecha_ingreso,
+    l.fecha_actualizacion,
+    l.usuario_ingreso,
+    l.acta_recepcion_id,
+    l.numero_factura,
+    l.alerta_vencimiento,
+    l.dias_vencimiento,
+    l.es_critico_vencimiento,
     p.nombre as producto_nombre,
     p.presentacion,
     p.laboratorio,
     pr.nombre as proveedor_nombre,
-    EXTRACT(DAY FROM l.fecha_vencimiento - CURRENT_DATE) as dias_vencimiento,
     CASE 
         WHEN l.fecha_vencimiento <= CURRENT_DATE THEN 'vencido'
-        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 DAY' THEN 'critico'
-        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 DAY' THEN 'advertencia'
-        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '180 DAY' THEN 'proximo'
+        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 DAYS' THEN 'critico'
+        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 DAYS' THEN 'advertencia'
+        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '180 DAYS' THEN 'proximo'
         ELSE 'normal'
     END as estado_vencimiento,
     (l.cantidad_disponible * l.precio_compra) as valor_lote
