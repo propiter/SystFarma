@@ -243,22 +243,43 @@ CREATE TABLE IF NOT EXISTS lotes (
     acta_recepcion_id INTEGER,
     numero_factura VARCHAR(50),
     alerta_vencimiento BOOLEAN DEFAULT FALSE,
-    dias_vencimiento INTEGER GENERATED ALWAYS AS (EXTRACT(days FROM fecha_vencimiento - CURRENT_DATE)) STORED,
-    
+
+    -- Nuevas columnas para evitar funciones STABLE en índices
+    dias_vencimiento INTEGER DEFAULT NULL,
+    es_critico_vencimiento BOOLEAN DEFAULT FALSE,
+
     -- Constraints
     CONSTRAINT chk_cantidad_disponible_inicial CHECK (cantidad_disponible <= cantidad_inicial),
     CONSTRAINT chk_fechas_logicas CHECK (fecha_vencimiento > COALESCE(fecha_fabricacion, CURRENT_DATE - INTERVAL '10 years')),
     CONSTRAINT uk_lote_producto UNIQUE (lote_codigo, producto_id)
 );
 
--- Índices para lotes
+-- =================================
+-- TRIGGER para actualizar dias_vencimiento y es_critico_vencimiento
+-- =================================
+CREATE OR REPLACE FUNCTION actualizar_alertas_lote()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.dias_vencimiento := EXTRACT(DAY FROM NEW.fecha_vencimiento - CURRENT_DATE);
+    NEW.es_critico_vencimiento := 
+        (NEW.fecha_vencimiento <= CURRENT_DATE + INTERVAL '6 months' AND NEW.cantidad_disponible > 0);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_alertas_lote
+BEFORE INSERT OR UPDATE ON lotes
+FOR EACH ROW
+EXECUTE FUNCTION actualizar_alertas_lote();
+
+-- ÍNDICES para lotes
+
 CREATE INDEX IF NOT EXISTS idx_lotes_producto ON lotes(producto_id);
 CREATE INDEX IF NOT EXISTS idx_lotes_codigo ON lotes(lote_codigo);
 CREATE INDEX IF NOT EXISTS idx_lotes_vencimiento ON lotes(fecha_vencimiento);
 CREATE INDEX IF NOT EXISTS idx_lotes_disponible ON lotes(cantidad_disponible) WHERE cantidad_disponible > 0;
 CREATE INDEX IF NOT EXISTS idx_lotes_estado ON lotes(estado);
-CREATE INDEX IF NOT EXISTS idx_lotes_vencimiento_critico ON lotes(fecha_vencimiento, cantidad_disponible) 
-    WHERE fecha_vencimiento <= CURRENT_DATE + INTERVAL '6 months' AND cantidad_disponible > 0;
+CREATE INDEX IF NOT EXISTS idx_lotes_critico ON lotes(es_critico_vencimiento) WHERE es_critico_vencimiento = true;
 CREATE INDEX IF NOT EXISTS idx_lotes_proveedor ON lotes(proveedor_id);
 
 -- =================================
@@ -802,7 +823,7 @@ DECLARE
     dias_vencimiento INTEGER;
     prioridad_alerta VARCHAR(10);
 BEGIN
-    dias_vencimiento := EXTRACT(days FROM NEW.fecha_vencimiento - CURRENT_DATE);
+    dias_vencimiento := EXTRACT(DAY FROM NEW.fecha_vencimiento - CURRENT_DATE);
     
     -- Determinar prioridad según días de vencimiento
     IF dias_vencimiento <= 30 THEN
@@ -979,12 +1000,12 @@ SELECT
     p.presentacion,
     p.laboratorio,
     pr.nombre as proveedor_nombre,
-    EXTRACT(days FROM l.fecha_vencimiento - CURRENT_DATE) as dias_vencimiento,
+    EXTRACT(DAY FROM l.fecha_vencimiento - CURRENT_DATE) as dias_vencimiento,
     CASE 
         WHEN l.fecha_vencimiento <= CURRENT_DATE THEN 'vencido'
-        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 days' THEN 'critico'
-        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 days' THEN 'advertencia'
-        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '180 days' THEN 'proximo'
+        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '30 DAY' THEN 'critico'
+        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '90 DAY' THEN 'advertencia'
+        WHEN l.fecha_vencimiento <= CURRENT_DATE + INTERVAL '180 DAY' THEN 'proximo'
         ELSE 'normal'
     END as estado_vencimiento,
     (l.cantidad_disponible * l.precio_compra) as valor_lote
