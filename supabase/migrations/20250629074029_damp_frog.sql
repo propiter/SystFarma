@@ -143,7 +143,7 @@ DO UPDATE SET
     rango_temperatura = EXCLUDED.rango_temperatura,
     temperatura_min = EXCLUDED.temperatura_min,
     temperatura_max = EXCLUDED.temperatura_max,
-    color_indicador = EXCLUDED.color_indicador,
+    color_indicador = EXCLUDED.color_indicador;
 
 -- =================================
 -- 6. TABLA: categorias
@@ -155,7 +155,8 @@ CREATE TABLE IF NOT EXISTS categorias (
     color VARCHAR(7) DEFAULT '#6B7280',
     icono VARCHAR(50),
     estado BOOLEAN DEFAULT TRUE,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Insertar categorías por defecto
