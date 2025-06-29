@@ -36,7 +36,11 @@ INSERT INTO configuracion_sistema (clave, valor, descripcion) VALUES
 ('impuesto_iva', '19', 'Porcentaje de IVA'),
 ('backup_automatico', 'true', 'Habilitar backup automático'),
 ('alertas_vencimiento', '180', 'Días de anticipación para alertas de vencimiento')
-ON CONFLICT (clave) DO NOTHING;
+ON CONFLICT (clave) 
+DO UPDATE SET 
+    valor = EXCLUDED.valor,
+    descripcion = EXCLUDED.descripcion,
+    fecha_actualizacion = CURRENT_TIMESTAMP;
 
 -- =================================
 -- 2. TABLA: usuarios
@@ -134,7 +138,12 @@ INSERT INTO temperaturas (descripcion, rango_temperatura, temperatura_min, tempe
 ('Refrigeración', '2-8°C', 2.0, 8.0, '#3B82F6'),
 ('Congelación', '-18°C o menos', -25.0, -18.0, '#8B5CF6'),
 ('Controlada', '20-25°C', 20.0, 25.0, '#F59E0B')
-ON CONFLICT (descripcion) DO NOTHING;
+ON CONFLICT (descripcion)
+DO UPDATE SET 
+    rango_temperatura = EXCLUDED.rango_temperatura,
+    temperatura_min = EXCLUDED.temperatura_min,
+    temperatura_max = EXCLUDED.temperatura_max,
+    color_indicador = EXCLUDED.color_indicador,
 
 -- =================================
 -- 6. TABLA: categorias
@@ -161,7 +170,11 @@ INSERT INTO categorias (nombre, descripcion, color) VALUES
 ('Respiratorio', 'Medicamentos para problemas respiratorios', '#3B82F6'),
 ('Dermatológico', 'Medicamentos para la piel', '#F59E0B'),
 ('Neurológico', 'Medicamentos para el sistema nervioso', '#6366F1')
-ON CONFLICT (nombre) DO NOTHING;
+ON CONFLICT (nombre)
+DO UPDATE SET 
+    descripcion = EXCLUDED.descripcion,
+    color = EXCLUDED.color,
+    fecha_actualizacion = CURRENT_TIMESTAMP;
 
 -- =================================
 -- 7. TABLA: productos
@@ -703,7 +716,12 @@ INSERT INTO configuracion_pos (nombre_config, valor_config, tipo_config, descrip
 ('formato_factura', 'termica', 'string', 'Formato de impresión de facturas', 'impresion'),
 ('logo_empresa', '', 'string', 'URL del logo para facturas', 'empresa'),
 ('mensaje_factura', 'Gracias por su compra', 'string', 'Mensaje en facturas', 'empresa')
-ON CONFLICT (nombre_config) DO NOTHING;
+ON CONFLICT (nombre_config)
+DO UPDATE SET 
+    valor_config = EXCLUDED.valor_config,
+    tipo_config = EXCLUDED.tipo_config,
+    descripcion = EXCLUDED.descripcion,
+    categoria = EXCLUDED.categoria;
 
 -- =================================
 -- TRIGGERS Y FUNCIONES
@@ -849,7 +867,13 @@ BEGIN
             NEW.fecha_vencimiento
         FROM productos p 
         WHERE p.producto_id = NEW.producto_id
-        ON CONFLICT DO NOTHING; -- Evitar duplicados
+        ON CONFLICT (producto_id, lote_id)
+        DO UPDATE SET 
+            fecha_vencimiento = EXCLUDED.fecha_vencimiento,
+            prioridad = EXCLUDED.prioridad,
+            titulo = EXCLUDED.titulo,
+            mensaje = EXCLUDED.mensaje,
+            fecha_actualizacion = CURRENT_TIMESTAMP;
     END IF;
     
     RETURN NEW;
@@ -1118,7 +1142,10 @@ END $$;
 -- Insertar cliente genérico
 INSERT INTO clientes (nombre, documento, tipo_documento) VALUES
 ('Cliente General', '0000000000', 'CC')
-ON CONFLICT (documento) DO NOTHING;
+ON CONFLICT (documento)
+    DO UPDATE SET 
+    nombre = EXCLUDED.nombre,
+    tipo_documento = EXCLUDED.tipo_documento;
 
 -- =================================
 -- COMENTARIOS Y DOCUMENTACIÓN
