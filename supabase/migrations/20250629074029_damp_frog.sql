@@ -254,26 +254,15 @@ CREATE TABLE IF NOT EXISTS lotes (
 -- =================================
 -- TRIGGER para actualizar dias_vencimiento y es_critico_vencimiento
 -- =================================
-DO $$
+CREATE OR REPLACE FUNCTION actualizar_alertas_lote()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_alertas_lote') THEN
-        EXECUTE '
-        CREATE OR REPLACE FUNCTION actualizar_alertas_lote()
-        RETURNS TRIGGER AS $func$
-        BEGIN
-            NEW.dias_vencimiento := EXTRACT(DAY FROM (NEW.fecha_vencimiento - CURRENT_DATE));
-            NEW.es_critico_vencimiento := (NEW.fecha_vencimiento <= (CURRENT_DATE + INTERVAL ''6 months'') AND NEW.cantidad_disponible > 0);
-            RETURN NEW;
-        END
-        $func$ LANGUAGE plpgsql';
-
-        EXECUTE '
-        CREATE TRIGGER trigger_alertas_lote
-        BEFORE INSERT OR UPDATE ON lotes
-        FOR EACH ROW
-        EXECUTE FUNCTION actualizar_alertas_lote()';
-    END IF;
-END $$;
+    NEW.dias_vencimiento := EXTRACT(DAY FROM NEW.fecha_vencimiento - CURRENT_DATE);
+    NEW.es_critico_vencimiento := 
+        (NEW.fecha_vencimiento <= CURRENT_DATE + INTERVAL '6 months' AND NEW.cantidad_disponible > 0);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ÍNDICES para lotes
 
