@@ -18,7 +18,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- 1. TABLA: configuracion_sistema
 -- =================================
 CREATE TABLE IF NOT EXISTS configuracion_sistema (
-    clave VARCHAR(50) PRIMARY KEY,
+    clave VARCHAR(50) PRIMARY KEY UNIQUE,
     valor TEXT NOT NULL,
     descripcion TEXT,
     fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -622,8 +622,8 @@ CREATE TABLE IF NOT EXISTS alertas_sistema (
     prioridad VARCHAR(10) NOT NULL CHECK (prioridad IN ('baja', 'media', 'alta', 'critica')),
     titulo VARCHAR(100) NOT NULL,
     mensaje TEXT NOT NULL,
-    producto_id INTEGER REFERENCES productos(producto_id),
-    lote_id INTEGER REFERENCES lotes(lote_id),
+    producto_id INTEGER REFERENCES productos(producto_id) UNIQUE,
+    lote_id INTEGER REFERENCES lotes(lote_id) UNIQUE,
     usuario_id INTEGER REFERENCES usuarios(usuario_id),
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_vencimiento TIMESTAMP,
@@ -696,7 +696,7 @@ CREATE INDEX IF NOT EXISTS idx_sesiones_expiracion ON sesiones_usuario(fecha_exp
 -- =================================
 CREATE TABLE IF NOT EXISTS configuracion_pos (
     config_id SERIAL PRIMARY KEY,
-    nombre_config VARCHAR(50) NOT NULL,
+    nombre_config VARCHAR(50) NOT NULL UNIQUE,
     valor_config TEXT NOT NULL,
     tipo_config VARCHAR(20) CHECK (tipo_config IN ('string', 'number', 'boolean', 'json')),
     descripcion TEXT,
