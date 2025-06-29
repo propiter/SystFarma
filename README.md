@@ -115,8 +115,8 @@
 
 ### **1. Clonar el Repositorio**
 ```bash
-git clone https://github.com/tu-usuario/sigfarma-system.git
-cd sigfarma-system
+git clone https://github.com/propiter/sigfarma.git
+cd sigfarma
 ```
 
 ### **2. Instalar Dependencias**
@@ -267,7 +267,7 @@ El sistema incluye usuarios predeterminados para pruebas iniciales:
 ## 📁 **ESTRUCTURA DEL PROYECTO**
 
 ```
-sigfarma-system/
+sigfarma/
 ├── 📁 src/                     # Código fuente frontend
 │   ├── 📁 components/          # Componentes reutilizables
 │   │   ├── Layout.tsx          # Layout principal
@@ -707,9 +707,9 @@ curl https://tu-dominio.com/health
 - 💬 **Chat:** Disponible en la aplicación
 
 ### **Comunidad:**
-- 🐛 **Issues:** [GitHub Issues](https://github.com/tu-usuario/sigfarma/issues)
-- 💡 **Sugerencias:** [GitHub Discussions](https://github.com/tu-usuario/sigfarma/discussions)
-- 📚 **Wiki:** [GitHub Wiki](https://github.com/tu-usuario/sigfarma/wiki)
+- 🐛 **Issues:** [GitHub Issues](https://github.com/propiter/sigfarma/issues)
+- 💡 **Sugerencias:** [GitHub Discussions](https://github.com/propiter/sigfarma/discussions)
+- 📚 **Wiki:** [GitHub Wiki](https://github.com/propiter/sigfarma/wiki)
 
 ---
 
